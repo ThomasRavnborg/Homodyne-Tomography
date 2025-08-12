@@ -1,3 +1,4 @@
 # Notebook checkpoints 
 .ipynb_checkpoints
-
+# Pycashe
+__pycache__
