@@ -2,3 +2,8 @@
 .ipynb_checkpoints
 # Pycashe
 __pycache__/
+#Data files
+data/*
+
+#.DS_Store
+.DS_Store
