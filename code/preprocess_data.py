@@ -38,13 +38,13 @@ for date in dates:
 
     for state in tqdm(state_dirs):
         state_path = data_folder / date / state
-        data_state = np.empty((13, 10000, 127, 3))  # angles, traces, time values, files per angle
+        data_state = np.empty((13, 3, 10000, 127))  # angles, files per angle, traces, time values
         for i,theta in enumerate(angles):
             files_theta = [f for f in state_path.iterdir() if 'C1cat'+f"{theta}" in f.name or 
                            'C1'+f"{theta}" in f.name]
-            data_theta = np.empty((10000, 127, 3))  # Initialize array for data
+            data_theta = np.empty((3, 10000, 127))  # Initialize array for data
             for j,f in enumerate(files_theta):
-                meta, times, data_theta[:,:,j] = lecroy.read(f, scale=False)
+                meta, times, data_theta[j,:,:] = lecroy.read(f, scale=False)
             
             data_state[i,:,:,:] = data_theta  # Store the data in the data_state array
 
