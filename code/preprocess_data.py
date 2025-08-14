@@ -10,6 +10,7 @@ Created on Wed Aug 13 2025
 import numpy as np
 import os
 import lecroy
+import json
 
 from pathlib import Path
 from scipy.fft import rfft, irfft, rfftfreq
@@ -36,6 +37,7 @@ for date in dates:
     state_dirs = [d.name for d in natsorted((data_folder / date).iterdir()) if d.is_dir() and \
                   ('cat' in d.name or 'tora' in d.name)]
 
+    dts = {}
     for state in tqdm(state_dirs):
         state_path = data_folder / date / state
         data_state = np.empty((13, 3, 10000, 127))  # angles, files per angle, traces, time values
@@ -45,11 +47,19 @@ for date in dates:
             data_theta = np.empty((3, 10000, 127))  # Initialize array for data
             for j,f in enumerate(files_theta):
                 meta, times, data_theta[j,:,:] = lecroy.read(f, scale=False)
+                
             
             data_state[i,:,:,:] = data_theta  # Store the data in the data_state array
+
+        dts[state] = meta['horiz_interval']  # Store the time intervals (dt) for the current state
 
         # create output directory if it doesn't exist
         out_dir_date = out_dir / date
         out_dir_date.mkdir(parents=True, exist_ok=True)
         # save the data for the current state
         np.save(out_dir / date / f'{state}.npy', data_state)
+
+        # Save the time intervals for each state
+        dts_path = out_dir / date / 'dts.json'
+        with open(dts_path, 'w') as f:
+            json.dump(dts, f, indent=4)
