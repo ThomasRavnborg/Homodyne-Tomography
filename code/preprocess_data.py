@@ -21,7 +21,7 @@ parent = Path.cwd()  # Get the parent directory (repo root directory)
 data_folder = parent / 'data' / 'data-tora'  # Path of data folder
 
 dates = os.listdir(data_folder)  # List of dates in the data folder
-angles = [str(i*15) for i in range(12)] + ['vac']
+angles = [f"{i*15:03}" for i in range(12)] + ['vac']
 
 
 #%% Load and process data for each date and angle
@@ -40,7 +40,8 @@ for date in dates:
         state_path = data_folder / date / state
         data_state = np.empty((13, 10000, 127, 3))  # angles, traces, time values, files per angle
         for i,theta in enumerate(angles):
-            files_theta = [f for f in state_path.iterdir() if 'C1cat'+f"{theta:03}" in f.name]
+            files_theta = [f for f in state_path.iterdir() if 'C1cat'+f"{theta}" in f.name or 
+                           'C1'+f"{theta}" in f.name]
             data_theta = np.empty((10000, 127, 3))  # Initialize array for data
             for j,f in enumerate(files_theta):
                 meta, times, data_theta[:,:,j] = lecroy.read(f, scale=False)
