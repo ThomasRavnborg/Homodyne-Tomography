@@ -38,7 +38,7 @@ for date in dates:
                   ('cat' in d.name or 'tora' in d.name)]
 
     dts = {}
-    for state in tqdm(state_dirs):
+    for state in tqdm(state_dirs, ascii="░▒▓"):
         state_path = data_folder / date / state
         data_state = np.empty((13, 3, 10000, 127))  # angles, files per angle, traces, time values
         for i,theta in enumerate(angles):
