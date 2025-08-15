@@ -4,6 +4,7 @@
 __pycache__/
 #Data files
 data/*
-
 #.DS_Store
 .DS_Store
+# Visual Studio Code settings
+.vscode/

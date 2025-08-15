@@ -1,19 +1,26 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 15 13:50:36 2025
+
+@author: Thomas Borup Ravnborg
+"""
+
 import numpy as np
 from scipy.special import hermite, factorial
 from tqdm import tqdm
 
-
 def Pi_mn(theta, x_vals, N):
     """
     Projection operator for multiple x values in Fock basis.
-
+    ---------------------------------------------------------
     Inputs:
         theta: Quadrature phase in radians (float)
         x_vals: Array of quadrature values (1D array)
-        N: Dimension cutoff
-
+        N: Fock space dimension cutoff
+    ---------------------------------------------------------
     Returns:
         psi: ndarray of shape (N, len(x_vals))
+    ---------------------------------------------------------
     """
     x_vals = np.atleast_1d(x_vals)
     num_x = len(x_vals)
@@ -28,13 +35,17 @@ def Pi_mn(theta, x_vals, N):
 
 def bin_X(quadratures, num_bins=200, range_x=None):
     """
-    quadratures: np.array of shape (M, K) — M angles, K measurements per angle
-    num_bins: number of histogram bins
-    range_x: (min, max) — if None, taken from data
-    
+    Function for binning quadrature values
+    ---------------------------------------------------------
+    Inputs:
+        quadratures: np.array of shape (M, K)
+        num_bins: number of histogram bins
+        range_x: (min, max) — if None, taken from data
+    ---------------------------------------------------------
     Returns:
         bin_centers: shape (num_bins,)
-        counts: shape (M, num_bins) — histogram counts for each angle
+        counts: shape (M, num_bins)
+    ---------------------------------------------------------
     """
     M, K = quadratures.shape
     if range_x is None:
@@ -53,6 +64,22 @@ def bin_X(quadratures, num_bins=200, range_x=None):
 
 
 def iMLE(thetas, x_values, N=10, num_bins=150, max_iters=50, tol=1e-6):
+    """
+    Iterative Maximum Likelihood Estimation (iMLE) for
+    quantum state tomography.
+    ---------------------------------------------------------
+    Inputs:
+        thetas: Array of quadrature phases (1D array)
+        x_values: Array of quadrature values (2D array)
+        N: Fock space dimension cutoff (int)
+        num_bins: Number of histogram bins (int)
+        max_iters: Maximum number of iterations (int)
+        tol: Convergence tolerance (float)
+    ---------------------------------------------------------
+    Returns:
+        rho: Estimated density matrix (ndarray)
+    ---------------------------------------------------------
+    """
     bin_centers, counts = bin_X(x_values, num_bins=num_bins)
     num_bins = len(bin_centers)
     M = len(thetas)
