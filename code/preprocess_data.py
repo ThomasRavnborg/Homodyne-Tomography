@@ -38,9 +38,9 @@ for date in dates:
                   ('cat' in d.name or 'tora' in d.name)]
 
     dts = {}
-    for state in tqdm(state_dirs):
+    for state in tqdm(state_dirs, ascii="░▒▓"):
         state_path = data_folder / date / state
-        data_state = np.empty((13, 3, 10000, 127))  # angles, files per angle, traces, time values
+        data_state = np.empty((13, 30000, 127))  # angles, files per angle * traces, time values
         for i,theta in enumerate(angles):
             files_theta = [f for f in state_path.iterdir() if 'C1cat'+f"{theta}" in f.name or 
                            'C1'+f"{theta}" in f.name]
@@ -48,8 +48,8 @@ for date in dates:
             for j,f in enumerate(files_theta):
                 meta, times, data_theta[j,:,:] = lecroy.read(f, scale=False)
                 
-            
-            data_state[i,:,:,:] = data_theta  # Store the data in the data_state array
+            data_theta = data_theta.reshape((-1,127))
+            data_state[i,:,:] = data_theta  # Store the data in the data_state array
 
         dts[state] = meta['horiz_interval']  # Store the time intervals (dt) for the current state
 
