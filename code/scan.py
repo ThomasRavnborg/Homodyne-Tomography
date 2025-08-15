@@ -8,11 +8,14 @@ Created on Wed Aug 14 2025
 #%% import necessary libraries
 
 import numpy as np
+import pandas as pd
 import json
 import os
 from natsort import natsorted
+from tqdm import tqdm
 
 from pathlib import Path
+from calculate_quadratures import calculate_quadratures
 
 
 #%% define functions
@@ -25,28 +28,37 @@ def fs(t, t0):
     return np.sqrt(gamma)*np.exp(-gamma*np.abs(t-t0))
 
 
-def vac_normalise(trace, vac_mean, vac_std):
-    """
-    Normalise trace wrt vaccum data
-    """
-    pass
-#%% read data
+#%% define data paths
 parent = Path.cwd()  # Get the parent directory (repo root directory)
-date = "091027"
-#state = "cat1"
 
 data_folder = parent / "data" / "processed_data"
+out_dir = parent / "data" / "dataframes"
 
-states_list = [d.name.split('.')[0] for d in natsorted((data_folder / date).iterdir()) if 
+dates = ["091027","091028","091029"]
+angles = [f"{i*15:03}" for i in range(12)]
+
+#%% start loop for all dates and states
+for date in dates:
+    print(f"Processing date {date}")
+
+    out_dir_date = out_dir / date
+    out_dir_date.mkdir(parents=True, exist_ok=True)
+
+    states_list = [d.name.split('.')[0] for d in natsorted((data_folder / date).iterdir()) if 
                'dts' not in d.name]
+    
+    for state in tqdm(states_list, ascii="░▒▓"):
+        dt = json.load(open(data_folder / date / 'dts.json'))[state]
+        data_state = np.load(data_folder / date / (state+'.npy'))
 
-state_ts = {}
-for state in states_list:
-    dt = json.load(open(data_folder / date / 'dts.json'))[state]
-    data = np.load(data_folder / date / (state+'.npy'))
+        # Get timestamps
+        data_angles = np.delete(data_state, 12, axis=0)  # remove vacuum
+        state_vars = data_angles.var(axis=1)  # get variance of 30000 points
+        timestamps = np.argmax(state_vars, axis=1)  # get timestamp of maximum variance
+        t0 = int(np.round(timestamps.mean()))
 
-    #%% Get timestamp
-    data_angles = np.delete(data, 12, axis=0)  # remove vacuum
-    state_vars = data_angles.var(axis=1)  # get variance of 30000 points
-    ts = np.argmax(state_vars)  # get timestamp of maximum variance
-    state_ts[state] = np.round(ts.mean())  # select avg time
+        # Scanning quadratures
+        x_theta = calculate_quadratures(data=data_state, dt=dt, t0=t0)
+        df_state = pd.DataFrame(x_theta.T, columns=angles)
+        df_state.to_csv((out_dir_date / f'{state}.csv'))
+
