@@ -5,13 +5,13 @@ def fs(t, t0):
     gamma = 2*np.pi*f
     return np.sqrt(gamma)*np.exp(-gamma*np.abs(t-t0))
 
-def calculate_quadratures(data, dt):
+def calculate_quadratures(data, dt, t0=39):
 
     N = data.shape[3]
     t = np.linspace(0, dt*N, N, endpoint=False)
 
     # Define temporal mode from peak in variance
-    temporal_mode = fs(t, t[39])  # shape (T,)
+    temporal_mode = fs(t, t[t0])  # shape (T,)
 
     # Extract vacuum data
     vacuum = data[-1,0,:,:]
