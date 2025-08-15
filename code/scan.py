@@ -15,7 +15,7 @@ from natsort import natsorted
 from tqdm import tqdm
 
 from pathlib import Path
-from calculate_quadratures import calculate_quadratures
+from utils import calculate_quadratures
 
 
 #%% define functions
