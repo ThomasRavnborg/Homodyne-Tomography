@@ -60,5 +60,5 @@ for date in dates:
         # Scanning quadratures
         x_theta = calculate_quadratures(data=data_state, dt=dt, t0=t0)
         df_state = pd.DataFrame(x_theta.T, columns=angles)
-        df_state.to_csv((out_dir_date / f'{state}.csv'))
+        df_state.to_csv((out_dir_date / f'{state}.csv'), index=False)
 
