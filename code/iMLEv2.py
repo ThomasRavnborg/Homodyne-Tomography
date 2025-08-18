@@ -10,6 +10,33 @@ import pandas as pd
 from scipy.special import hermite, factorial
 from tqdm import tqdm
 
+def get_overlaps(bin_centers, thetas, N):
+    """
+    Precompute overlaps <n|x,θ> for all n, bins, and thetas.
+    ---------------------------------------------------------
+    Inputs:
+        bin_centers: quadrature values, ndarray of shape (M,)
+        thetas: quadrature phases, ndarray of shape (K,)
+        N: Fock space dimension cutoff, int
+    ---------------------------------------------------------
+    Returns:
+        overlaps: dict - keys are (i, j) tuples and values are (N, 1) column vectors
+    ---------------------------------------------------------
+    """
+    overlaps = {}
+    for i, theta in enumerate(thetas):
+        for j, x in enumerate(bin_centers):
+            coeffs = np.zeros(N, dtype=np.complex128)
+            # Normalization factor
+            norm = (2/np.pi)**(1/4) * np.exp(-x**2)
+
+            for n in range(N):
+                Hn = hermite(n)(np.sqrt(2) * x)
+                coeffs[n] = norm * Hn / np.sqrt(2**n * factorial(n)) * np.exp(1j * n * theta)
+            overlaps[(i, j)] = coeffs[:, np.newaxis]  # column vector
+    return overlaps
+
+
 def get_Pi(theta, x, N):
     """
     Calculates projection operator
@@ -37,24 +64,6 @@ def get_Pi(theta, x, N):
     # Build projection operators, shape (N, N)
     Pi = overlap @ np.conjugate(overlap.T)
     return Pi
-
-def get_Prob(theta, x, N, rho):
-    """
-    Probability
-    ---------------------------------------------------------
-    Inputs:
-        theta: Quadrature phase in radians (float)
-        x: Quadrature value (float)
-        N: Fock space dimension cutoff (int)
-    ---------------------------------------------------------
-    Returns:
-        prob: float
-    ---------------------------------------------------------
-    """
-
-    Pi = get_Pi(theta, x, N)
-
-    return np.trace(Pi @ rho).real
 
 def bin_X(quadratures, num_bins=200, range_x=None):
     """
@@ -96,68 +105,57 @@ def MaximumLikelihood(thetas, x_values, N=10, num_bins=150, max_iters=200):
 
         R = np.zeros((N, N), dtype=complex)
 
-        for th in thetas:
-            for bin in bin_centers:
+        for i, th in enumerate(thetas):
+            for j, bin in enumerate(bin_centers):
                 Pi = get_Pi(th, bin, N)
-                Pr = get_Prob(th, bin, N, rho)
+                Pr = np.trace(Pi @ rho).real
                 if Pr <= 0:
                     Pr = 1e-15
-                R += counts[th, bin]/Pr * Pi
+                R += counts[i, j]/Pr * Pi
 
         rho = R @ rho @ R
         rho /= np.trace(rho)
+    
+    return rho
 
-
-def iMLE(thetas, x_values, N=10, num_bins=150, max_iters=50, tol=1e-6):
-    """
-    Iterative Maximum Likelihood Estimation (iMLE) for
-    quantum state tomography.
-    ---------------------------------------------------------
-    Inputs:
-        thetas: Array of quadrature phases (1D array)
-        x_values: Array of quadrature values (2D array)
-        N: Fock space dimension cutoff (int)
-        num_bins: Number of histogram bins (int)
-        max_iters: Maximum number of iterations (int)
-        tol: Convergence tolerance (float)
-    ---------------------------------------------------------
-    Returns:
-        rho: Estimated density matrix (ndarray)
-    ---------------------------------------------------------
-    """
+def MaximumLikelihood(thetas, x_values, N=10, num_bins=150, max_iters=200, tol=1e-6):
     bin_centers, counts = bin_X(x_values, num_bins=num_bins)
-    #num_bins = len(bin_centers)
-    M = len(thetas)
-
-    psi_all = {}
-    for i in range(M):
-        psi_all[i] = Pi_mn(thetas[i], bin_centers, N)  # (N, num_bins)
-
-    rho = np.eye(N) / N
+    overlaps = get_overlaps(bin_centers, thetas, N)
+    
+    rho = np.eye(N, dtype=np.complex128) / N
+    likelihoods = []
 
     for it in tqdm(range(max_iters)):
-        R = np.zeros((N, N), dtype=complex)
+        R = np.zeros((N, N), dtype=np.complex128)
+        logL = 0.0
 
-        for i in range(M):
-            psi = psi_all[i]
-            for j in range(num_bins):
+        for i, th in enumerate(thetas):
+            for j, x in enumerate(bin_centers):
                 c = counts[i, j]
                 if c == 0:
                     continue
-                psi_j = psi[:, j][:, np.newaxis]
-                p = (psi_j.conj().T @ rho @ psi_j).real.item()
+                psi = overlaps[(i, j)]
+                Pi = psi @ psi.conj().T
+                p = np.trace(Pi @ rho).real
                 if p <= 0:
                     p = 1e-15
-                R += c * (psi_j @ psi_j.conj().T) / p
+                R += (c / p) * Pi
+                logL += c * np.log(p)
 
         rho_new = R @ rho @ R
         rho_new /= np.trace(rho_new)
 
-        if np.linalg.norm(rho_new - rho) < tol:
-            print(f"Converged in {it} iterations.")
-            break
+        likelihoods.append(logL)
         rho = rho_new
-    return rho
+
+        # convergence by log-likelihood saturation
+        if it > 0 and abs(likelihoods[-1] - likelihoods[-2]) < tol:
+            print(f"Converged at iteration {it}, log-likelihood={logL:.6f}")
+            break
+
+    return rho, likelihoods
+
+
 
 
 import os
@@ -165,7 +163,7 @@ from pathlib import Path
 # Loading data
 parent = Path(os.path.dirname(os.getcwd()))
 date = "091027"
-state = "tora12"
+state = "cat2"
 
 data_path = parent / "Homodyne-Tomograpy" / "data" / "dataframes" / date
 print(data_path)
@@ -190,6 +188,6 @@ x0 = -0.1
 theta0 = 0
 x0 = 0
 
-rho_est = MaximumLikelihood(thetas-theta0, x_values-x0, N=20, num_bins=200, max_iters=100)
+rho_est, likelihoods = MaximumLikelihood(thetas-theta0, x_values-x0, N=20, num_bins=200, max_iters=400)
+np.save("rho_est.npy", rho_est)
 
-print(rho_est)
