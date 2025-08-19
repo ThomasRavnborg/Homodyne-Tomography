@@ -8,7 +8,7 @@ import numpy as np
 import time
 from utils import get_overlaps, bin_X
 
-def iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1):
+def run_iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1):
     """
     Iterative Maximum Likelihood Estimation (iMLE).
     
