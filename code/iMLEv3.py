@@ -5,9 +5,10 @@ Created on Fri Aug 15 13:50:36 2025
 @author: Thomas Borup Ravnborg
 """
 import numpy as np
+import time
 from utils import get_overlaps, bin_X
 
-def iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-3):
+def iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1):
     """
     Iterative Maximum Likelihood Estimation (iMLE).
     
@@ -34,6 +35,7 @@ def iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-3):
     # Initialize density matrix and likelihood
     rho = np.eye(N, dtype=np.complex128) / N
     likelihoods = []
+    rhos = [rho]
 
     # Iterative algorithm running to maximize log-likelihood
     for it in range(max_iters):
@@ -60,6 +62,7 @@ def iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-3):
         # Update density matrix
         rho = R @ rho @ R
         rho /= np.trace(rho)
+        rhos.append(rho)
 
         # Append log-likelihood value for convergence
         likelihoods.append(logL)
@@ -68,6 +71,35 @@ def iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-3):
             print(f"Converged at iteration {it}, log-likelihood={logL:.6f}")
             break
 
-    print("Warning: Maximum iterations reached without convergence.")
+    #print("Warning: Maximum iterations reached without convergence.")
 
-    return rho, likelihoods
+    return rhos, likelihoods
+
+
+
+def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, tol=1e-1):
+    """
+    Runs iMLE benchmark for a grid of N and n_bins, 
+    returns log-likelihoods and runtimes.
+    """
+    n_samples = x_values.size  # total number of quadrature measurements
+    likelihood_grid = np.zeros((len(N_values), len(nbin_values)))
+    runtime_grid = np.zeros((len(N_values), len(nbin_values)))
+
+    for i, N in enumerate(N_values):
+        for j, nbins in enumerate(nbin_values):
+            start = time.time()
+            print(f"Running iMLE for N={N}, bins={nbins}")
+            rhos, lls = iMLE(thetas, x_values, N=N, num_bins=nbins,
+                             max_iters=max_iters, tol=tol)
+            runtime = time.time() - start
+
+            likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
+            runtime_grid[i, j] = runtime
+
+    # Normalize likelihood per sample & relative to max
+    per_sample = likelihood_grid / n_samples
+    delta_ll = per_sample - np.max(per_sample)
+
+    return delta_ll, runtime_grid
+
