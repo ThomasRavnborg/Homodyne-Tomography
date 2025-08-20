@@ -11,14 +11,22 @@ import numpy as np
 import os
 import lecroy
 import json
+import sys
 
 from pathlib import Path
 from scipy.fft import rfft, irfft, rfftfreq
 from natsort import natsorted
 from tqdm import tqdm
 
-#%% Define paths, dates and angles
-parent = Path.cwd()  # Get the parent directory (repo root directory)
+
+args = sys.argv  # Get command line arguments
+
+if len(args) > 1:
+    parent = Path(args[1])  # Use the first argument as the parent directory
+else:
+    parent = Path.cwd()
+
+#%% Define paths, dates and anglesparent = Path.cwd()  # Get the parent directory (repo root directory)
 data_folder = parent / 'data' / 'data-tora'  # Path of data folder
 
 dates = os.listdir(data_folder)  # List of dates in the data folder
