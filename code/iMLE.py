@@ -4,112 +4,102 @@ Created on Fri Aug 15 13:50:36 2025
 
 @author: Thomas Borup Ravnborg
 """
-
 import numpy as np
-from scipy.special import hermite, factorial
-from tqdm import tqdm
+import time
+from utils import get_overlaps, bin_X
 
-def Pi_mn(theta, x_vals, N):
+def run_iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1):
     """
-    Projection operator for multiple x values in Fock basis.
-    ---------------------------------------------------------
+    Iterative Maximum Likelihood Estimation (iMLE).
+    
     Inputs:
-        theta: Quadrature phase in radians (float)
-        x_vals: Array of quadrature values (1D array)
-        N: Fock space dimension cutoff
-    ---------------------------------------------------------
+        thetas : Quadrature phases in radians (ndarray)
+        x_vals : Quadrature values (ndarray, shape (M, K))
+        N : Fock space cutoff dimension (int)
+        num_bins : Number of histogram bins (int)
+        max_iters : Maximum number of iterations (int)
+        tol : Convergence tolerance for log-likelihood increments (float)
+    
     Returns:
-        psi: ndarray of shape (N, len(x_vals))
-    ---------------------------------------------------------
+        rho : Estimated density matrix (ndarray, shape (N, N))
+        likelihoods : list of floats
+            Log-likelihood value per iteration
     """
-    x_vals = np.atleast_1d(x_vals)
-    num_x = len(x_vals)
-    psi = np.zeros((N, num_x), dtype=np.complex128)
-    norm = (1 / (np.pi**0.25)) * np.exp(-x_vals**2 / 2)
-
-    for n in range(N):
-        Hn = hermite(n)(x_vals)
-        psi[n, :] = norm * Hn / np.sqrt(2**n * factorial(n)) * np.exp(-1j * n * theta)
-
-    return psi
-
-def bin_X(quadratures, num_bins=200, range_x=None):
-    """
-    Function for binning quadrature values
-    ---------------------------------------------------------
-    Inputs:
-        quadratures: np.array of shape (M, K)
-        num_bins: number of histogram bins
-        range_x: (min, max) — if None, taken from data
-    ---------------------------------------------------------
-    Returns:
-        bin_centers: shape (num_bins,)
-        counts: shape (M, num_bins)
-    ---------------------------------------------------------
-    """
-    M, K = quadratures.shape
-    if range_x is None:
-        min_x, max_x = np.min(quadratures), np.max(quadratures)
-    else:
-        min_x, max_x = range_x
-
-    counts = np.zeros((M, num_bins), dtype=int)
-    bin_edges = np.linspace(min_x, max_x, num_bins + 1)
-    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-
-    for i in range(M):
-        counts[i], _ = np.histogram(quadratures[i], bins=bin_edges)
-
-    return bin_centers, counts
-
-
-def iMLE(thetas, x_values, N=10, num_bins=150, max_iters=50, tol=1e-6):
-    """
-    Iterative Maximum Likelihood Estimation (iMLE) for
-    quantum state tomography.
-    ---------------------------------------------------------
-    Inputs:
-        thetas: Array of quadrature phases (1D array)
-        x_values: Array of quadrature values (2D array)
-        N: Fock space dimension cutoff (int)
-        num_bins: Number of histogram bins (int)
-        max_iters: Maximum number of iterations (int)
-        tol: Convergence tolerance (float)
-    ---------------------------------------------------------
-    Returns:
-        rho: Estimated density matrix (ndarray)
-    ---------------------------------------------------------
-    """
-    bin_centers, counts = bin_X(x_values, num_bins=num_bins)
-    #num_bins = len(bin_centers)
+    # Bin quadrature data
+    bin_centers, counts = bin_X(x_vals, num_bins=num_bins)
     M = len(thetas)
 
-    psi_all = {}
-    for i in range(M):
-        psi_all[i] = Pi_mn(thetas[i], bin_centers, N)  # (N, num_bins)
+    # Precompute overlaps psi = <n|x,θ> for all angles and bins
+    psi_all = {i: get_overlaps(thetas[i], bin_centers, N) for i in range(M)}
 
-    rho = np.eye(N) / N
+    # Initialize density matrix and likelihood
+    rho = np.eye(N, dtype=np.complex128) / N
+    likelihoods = []
+    rhos = [rho]
 
-    for it in tqdm(range(max_iters)):
-        R = np.zeros((N, N), dtype=complex)
+    # Iterative algorithm running to maximize log-likelihood
+    for it in range(max_iters):
+        
+        # Initial R and log-likelihood
+        R = np.zeros((N, N), dtype=np.complex128)
+        logL = 0.0
 
+        # Construct R and calculate log-likelihood over all angles
         for i in range(M):
+            # Extract quadrature eigenstate wavefunction
             psi = psi_all[i]
-            for j in range(num_bins):
-                c = counts[i, j]
+            # Iterate over histogram bins
+            for j, c in enumerate(counts[i]):
                 if c == 0:
                     continue
                 psi_j = psi[:, j][:, np.newaxis]
                 p = (psi_j.conj().T @ rho @ psi_j).real.item()
                 if p <= 0:
                     p = 1e-15
-                R += c * (psi_j @ psi_j.conj().T) / p
+                R += (c / p) * (psi_j @ psi_j.conj().T)
+                logL += c * np.log(p)
 
-        rho_new = R @ rho @ R
-        rho_new /= np.trace(rho_new)
+        # Update density matrix
+        rho = R @ rho @ R
+        rho /= np.trace(rho)
+        rhos.append(rho)
 
-        if np.linalg.norm(rho_new - rho) < tol:
-            print(f"Converged in {it} iterations.")
+        # Append log-likelihood value for convergence
+        likelihoods.append(logL)
+        # Log-likelihood convergence check
+        if it > 0 and abs(likelihoods[-1] - likelihoods[-2]) < tol:
+            print(f"Converged at iteration {it}, log-likelihood={logL:.6f}")
             break
-        rho = rho_new
-    return rho
+
+    #print("Warning: Maximum iterations reached without convergence.")
+
+    return rhos, likelihoods
+
+
+
+def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, tol=1e-1):
+    """
+    Runs iMLE benchmark for a grid of N and n_bins, 
+    returns log-likelihoods and runtimes.
+    """
+    n_samples = x_values.size  # total number of quadrature measurements
+    likelihood_grid = np.zeros((len(N_values), len(nbin_values)))
+    runtime_grid = np.zeros((len(N_values), len(nbin_values)))
+
+    for i, N in enumerate(N_values):
+        for j, nbins in enumerate(nbin_values):
+            start = time.time()
+            print(f"Running iMLE for N={N}, bins={nbins}")
+            rhos, lls = iMLE(thetas, x_values, N=N, num_bins=nbins,
+                             max_iters=max_iters, tol=tol)
+            runtime = time.time() - start
+
+            likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
+            runtime_grid[i, j] = runtime
+
+    # Normalize likelihood per sample & relative to max
+    per_sample = likelihood_grid / n_samples
+    delta_ll = per_sample - np.max(per_sample)
+
+    return delta_ll, runtime_grid
+
