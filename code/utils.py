@@ -44,7 +44,7 @@ def get_overlaps(theta, x_vals, N):
         N : Fock space cutoff dimension (int)
     
     Returns:
-        psi : overlap vector |x,θ> (ndarray, shape (N, M, K))
+        psi : overlap vector <n|x,θ> (ndarray, shape (N, M, K))
     """
     # Ensure x_vals is a 1D array and count number of elements
     x_vals = np.atleast_1d(x_vals)

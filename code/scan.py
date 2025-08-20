@@ -15,18 +15,7 @@ from natsort import natsorted
 from tqdm import tqdm
 
 from pathlib import Path
-from utils import calculate_quadratures
-
-
-#%% define functions
-def fs(t, t0):
-    """
-    Temporal mode function
-    """
-    f = 9*1e6 # Hz
-    gamma = f*2*np.pi
-    return np.sqrt(gamma)*np.exp(-gamma*np.abs(t-t0))
-
+from utils import fs, calculate_quadratures
 
 #%% define data paths
 parent = Path.cwd()  # Get the parent directory (repo root directory)
