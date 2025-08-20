@@ -43,6 +43,7 @@ def metropolis_hastings(
 
     logL = log_likelihood(rho, psi_all, counts, M)
     rho_chain = [rho]
+    logL_chain = [logL]
 
     print("Computing Markov chain...\n")
     for _ in tqdm(range(nrhos)):
@@ -55,9 +56,11 @@ def metropolis_hastings(
         accepted, logL = accept_rho(rho, rho_new, psi_all, counts, M, logL)
         if accepted:
             rho, T = rho_new, T_new
+        
         rho_chain.append(rho)
+        logL_chain.append(logL)
 
-    return rho_chain
+    return rho_chain, logL_chain
             
 
 def run_BME(
@@ -88,7 +91,7 @@ def run_BME(
 
     psi_all = [get_overlaps(theta, bin_centers, N) for theta in thetas]
 
-    rho_chain = metropolis_hastings(N, psi_all, counts, M, epsilon=epsilon, max_iter=nrho)
+    rho_chain, logL_chain = metropolis_hastings(psi_all, counts, M=M, N=N, nrhos=nrho, epsilon=epsilon)
 
     burn_in = int(0.2 * len(rho_chain))  # discard first 20%
     samples = rho_chain[burn_in:]
@@ -97,32 +100,57 @@ def run_BME(
     rho_est = (rho_est + rho_est.conj().T) / 2  # enforce Hermitian
     rho_est /= np.trace(rho_est)                # enforce trace 1
 
-    return rho_est
+    return rho_est, logL_chain
     
 
 #%% 
-def run_BME_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, tol=1e-1):
+def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
     """
     Runs iMLE benchmark for a grid of N and n_bins, 
     returns log-likelihoods and runtimes.
     """
     n_samples = x_values.size  # total number of quadrature measurements
-    likelihood_grid = np.zeros((len(N_values), len(nbin_values)))
-    runtime_grid = np.zeros((len(N_values), len(nbin_values)))
 
-    for i, N in enumerate(N_values):
-        for j, nbins in enumerate(nbin_values):
+    if len(nrhos_values) == 1:
+        likelihood_grid = np.zeros((len(N_values), len(nbin_values)))
+        runtime_grid = np.zeros((len(N_values), len(nbin_values)))
+        for i, N in enumerate(N_values):
+            for j, nbins in enumerate(nbin_values):
+                start = time.time()
+                print(f"Running iMLE for N={N}, bins={nbins}")
+                rho_est, lls = run_BME(thetas, x_values, N=N, num_bins=nbins,
+                                nrho=nrhos_values[0])
+                runtime = time.time() - start
+
+                likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
+                runtime_grid[i, j] = runtime
+        
+        # Normalize likelihood per sample & relative to max
+        per_sample = likelihood_grid / n_samples
+        delta_ll = per_sample - np.max(per_sample)
+
+    elif len(nrhos_values) > 1:
+        likelihood_grid = np.zeros((1, len(nrhos_values)))
+        runtime_grid = np.zeros((1, len(nrhos_values)))
+        for k, nrho in enumerate(nrhos_values):
             start = time.time()
-            print(f"Running iMLE for N={N}, bins={nbins}")
-            rhos, lls = run_BME(thetas, x_values, N=N, num_bins=nbins,
-                             max_iters=max_iters, tol=tol)
+            print(f"Running BME for nrho={nrho}")
+            rho_est, lls = run_BME(thetas, x_values, N=N_values[0], num_bins=nbin_values[0],
+                                nrho=nrhos_values[k])
             runtime = time.time() - start
 
-            likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
-            runtime_grid[i, j] = runtime
+            likelihood_grid[0, k] = lls[-1]  # take final log-likelihood
+            runtime_grid[0, k] = runtime
+
+        # Normalize likelihood per sample & relative to max
+        per_sample = likelihood_grid / n_samples
+        delta_ll = per_sample - np.max(per_sample)
+
+    else:
+        raise ValueError("nrhos_values must be a list with at least one element.")
 
     # Normalize likelihood per sample & relative to max
-    per_sample = likelihood_grid / n_samples
-    delta_ll = per_sample - np.max(per_sample)
+    # per_sample = likelihood_grid / n_samples
+    # delta_ll = per_sample - np.max(per_sample)
 
     return delta_ll, runtime_grid
