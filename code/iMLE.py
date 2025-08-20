@@ -90,7 +90,7 @@ def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, t
         for j, nbins in enumerate(nbin_values):
             start = time.time()
             print(f"Running iMLE for N={N}, bins={nbins}")
-            rhos, lls = iMLE(thetas, x_values, N=N, num_bins=nbins,
+            rhos, lls = run_iMLE(thetas, x_values, N=N, num_bins=nbins,
                              max_iters=max_iters, tol=tol)
             runtime = time.time() - start
 

@@ -41,7 +41,7 @@ out_dir.mkdir(parents=True, exist_ok=True)  # Create output directory if it does
 # Iterate over files to create a 4D array of data
 # Shape: (angles, traces, time values, values per time + angle) = (13, 10000, 127, 3)
 for date in dates:
-    print(f"Processing date: {date}")
+    print(f"Processing data in folder: {date}")
     state_dirs = [d.name for d in natsorted((data_folder / date).iterdir()) if d.is_dir() and \
                   ('cat' in d.name or 'tora' in d.name)]
 

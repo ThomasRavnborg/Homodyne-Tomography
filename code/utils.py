@@ -44,7 +44,7 @@ def get_overlaps(theta, x_vals, N):
         N : Fock space cutoff dimension (int)
     
     Returns:
-        psi : overlap vector |x,θ> (ndarray, shape (N, M, K))
+        psi : overlap vector <n|x,θ> (ndarray, shape (N, M, K))
     """
     # Ensure x_vals is a 1D array and count number of elements
     x_vals = np.atleast_1d(x_vals)
@@ -75,6 +75,11 @@ def bin_X(x_vals, num_bins=200, range_x=None):
         bin_centers : ndarray, shape (num_bins,)
         counts : ndarray, shape (M, num_bins)
     """
+
+    # If x_vals is 1D, add a new axis
+    if x_vals.ndim == 1:
+        x_vals = x_vals[np.newaxis, :]
+
     M, K = x_vals.shape
     if range_x is None:
         min_x, max_x = np.min(x_vals), np.max(x_vals)
