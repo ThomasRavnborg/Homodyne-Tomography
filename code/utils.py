@@ -104,10 +104,34 @@ def log_likelihood(rho, psi_all, counts, M, dx=1):
     return logL
 
 
+def log_prior(rho):
+    """
+    Log-prior for density matrices.
+    Simple choice: uniform over positive semidefinite, trace-1 matrices.
+    Returns -inf if rho is not valid (reject in MH step).
+    """
+    # Check Hermitian
+    if not np.allclose(rho, rho.conj().T):
+        return -np.inf
+    # Check positive semidefinite
+    if np.any(np.linalg.eigvalsh(rho) < 0):
+        return -np.inf
+    # Check trace 1
+    if not np.isclose(np.trace(rho), 1.0):
+        return -np.inf
+    return 0.0  # uniform prior
+
 def accept_rho(rho, rho_new, psi_all, counts, M, logL_old):
+    """
+    Metropolis-Hastings acceptance with prior.
+    """
     logL_new = log_likelihood(rho_new, psi_all, counts, M)
-    logA = logL_new - logL_old
-    if np.log(np.random.rand()) < logA:  # log-compare avoids an exp call
+    log_prior_old = log_prior(rho)
+    log_prior_new = log_prior(rho_new)
+
+    logA = (logL_new + log_prior_new) - (logL_old + log_prior_old)
+    
+    if np.log(np.random.rand()) < logA:
         return True, logL_new
     else:
         return False, logL_old

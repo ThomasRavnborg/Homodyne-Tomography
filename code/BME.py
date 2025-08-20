@@ -95,12 +95,15 @@ def run_BME(
 
     burn_in = int(0.2 * len(rho_chain))  # discard first 20%
     samples = rho_chain[burn_in:]
+    logL_subchain = logL_chain[burn_in:]
 
     rho_est = np.mean(samples, axis=0)
     rho_est = (rho_est + rho_est.conj().T) / 2  # enforce Hermitian
-    rho_est /= np.trace(rho_est)                # enforce trace 1
+    rho_est /= np.trace(rho_est)  
+    
+    logL_avg = np.mean(logL_subchain)              # enforce trace 1
 
-    return rho_est, logL_chain
+    return rho_est, logL_avg
     
 
 #%% 
@@ -118,11 +121,11 @@ def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
             for j, nbins in enumerate(nbin_values):
                 start = time.time()
                 print(f"Running iMLE for N={N}, bins={nbins}")
-                rho_est, lls = run_BME(thetas, x_values, N=N, num_bins=nbins,
+                rho_est, logL = run_BME(thetas, x_values, N=N, num_bins=nbins,
                                 nrho=nrhos_values[0])
                 runtime = time.time() - start
 
-                likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
+                likelihood_grid[i, j] = logL  # take final log-likelihood
                 runtime_grid[i, j] = runtime
         
         # Normalize likelihood per sample & relative to max
@@ -135,11 +138,11 @@ def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
         for k, nrho in enumerate(nrhos_values):
             start = time.time()
             print(f"Running BME for nrho={nrho}")
-            rho_est, lls = run_BME(thetas, x_values, N=N_values[0], num_bins=nbin_values[0],
+            rho_est, logL = run_BME(thetas, x_values, N=N_values[0], num_bins=nbin_values[0],
                                 nrho=nrhos_values[k])
             runtime = time.time() - start
 
-            likelihood_grid[0, k] = lls[-1]  # take final log-likelihood
+            likelihood_grid[0, k] = logL  # take final log-likelihood
             runtime_grid[0, k] = runtime
 
         # Normalize likelihood per sample & relative to max
