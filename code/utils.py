@@ -89,3 +89,25 @@ def bin_X(x_vals, num_bins=200, range_x=None):
         counts[i], _ = np.histogram(x_vals[i], bins=bin_edges)
 
     return bin_centers, counts
+
+
+def log_likelihood(rho, psi_all, counts, M, dx=1):
+    # Optimised version
+    logL = 0.0
+    for i in range(M):
+        psi = psi_all[i]   # shape (N, num_bins)
+        c = counts[i]      # shape (num_bins,)
+        rho_psi = rho @ psi             # (N, num_bins)
+        p = dx * np.real(np.sum(psi.conj() * rho_psi, axis=0))  # (num_bins,)
+        p = np.maximum(p, 1e-15)
+        logL += np.dot(c, np.log(p))
+    return logL
+
+
+def accept_rho(rho, rho_new, psi_all, counts, M, logL_old):
+    logL_new = log_likelihood(rho_new, psi_all, counts, M)
+    logA = logL_new - logL_old
+    if np.log(np.random.rand()) < logA:  # log-compare avoids an exp call
+        return True, logL_new
+    else:
+        return False, logL_old
