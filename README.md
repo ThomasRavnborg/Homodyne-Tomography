@@ -8,7 +8,7 @@ Authors: Thomas Borup Ravnborg and Jan Scarabelli Calopa
 
 Homodyne tomography is a method for reconstructing quantum states of light by measuring field quadratures $Q_\theta$ at different local oscillator (LO) phases $\theta$ using a Homodyne detection scheme. From these measurements, one can recover the Wigner function $W(Q,P)$ and density matrix $\rho$, which makes it a key tool for verifying the preparation of nonclassical states in quantum optics.
 
-<img src="images/HomodyneTomography.png" alt="Homodyne Tomography" height="200"/><img src="images/HomodyneDetector.png" alt="Homodyne Detector" height="200"/>
+<img src="images/HomodyneTomography.png" alt="Homodyne Tomography" height="250"/><img src="images/HomodyneDetector.png" alt="Homodyne Detector" height="250"/>
 
 In the paper *Optical Continuous-Variable Qubit* (see references), superpositions of squeezed vacuum and squeezed single-photon states were engineered using photon subtraction. The setup employed an optical parametric oscillator (OPO) to generate squeezed vacuum, a small fraction of which was tapped off, displaced, and detected by an avalanche photodiode (APD). Conditional detection prepared the desired superpositions, which were then analyzed using balanced homodyne detection across multiple LO phases.
 
