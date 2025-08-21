@@ -3,7 +3,9 @@
 # Pycashe
 __pycache__/
 #Data files
-data/*
+data/data-tora/
+data/dataframes/
+data/processed_data/
 #.DS_Store
 .DS_Store
 # Visual Studio Code settings
