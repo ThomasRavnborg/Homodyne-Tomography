@@ -119,15 +119,19 @@ def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
         runtime_grid = np.zeros((len(N_values), len(nbin_values)))
 
         print("Running BME benchmark over N and num. bins...\n")
-        for i, N in tqdm(enumerate(N_values), total=len(N_values)):
-            for j, nbins in enumerate(nbin_values):
-                start = time.time()
-                rho_est, logL_subchain = run_BME(thetas, x_values, N=N, num_bins=nbins,
-                                nrho=nrhos_values[0])
-                runtime = time.time() - start
+        n_iter = len(N_values) * len(nbin_values)
+        with tqdm(total=n_iter) as pbar:
+            for i, N in enumerate(N_values):
+                for j, nbins in enumerate(nbin_values):
+                    start = time.time()
+                    rho_est, logL_subchain = run_BME(thetas, x_values, N=N, num_bins=nbins,
+                                    nrho=nrhos_values[0])
+                    runtime = time.time() - start
 
-                likelihood_grid[i, j] = np.mean(logL_subchain)  # take avg log-likelihood
-                runtime_grid[i, j] = runtime
+                    likelihood_grid[i, j] = np.mean(logL_subchain)  # take avg log-likelihood
+                    runtime_grid[i, j] = runtime
+
+                    pbar.update(1)  # update progress bar
         
         # Normalize likelihood per sample & relative to max
         per_sample = likelihood_grid / n_samples

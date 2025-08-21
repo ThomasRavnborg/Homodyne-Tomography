@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import hermite, factorial
+import matplotlib.pyplot as plt
 
 def fs(t, t0):
     f = 9*1e6 # Hz
@@ -140,3 +141,76 @@ def accept_rho(rho, rho_new, psi_all, counts, M, logL_old):
         return True, logL_new
     else:
         return False, logL_old
+    
+
+
+def plot_results(delta_ll, runtime_grid, N_values, nbin_values):
+    fig, axs = plt.subplots(1, 2, figsize=(12, 8), constrained_layout=True)
+
+    # First heatmap: Δ log-likelihood
+    c0 = axs[0].pcolormesh(nbin_values, N_values, delta_ll, shading="auto", cmap="viridis")
+    axs[0].set_title("Δ log-likelihood per sample")
+    axs[0].set_xlabel("Number of bins")
+    axs[0].set_ylabel("Fock cutoff N")
+    axs[0].set_xticks(nbin_values)
+    axs[0].set_yticks(N_values)
+    fig.colorbar(c0, ax=axs[0])
+
+    # Second heatmap: Runtime
+    c1 = axs[1].pcolormesh(nbin_values, N_values, runtime_grid, shading="auto", cmap="magma")
+    axs[1].set_title("Runtime (s)")
+    axs[1].set_xlabel("Number of bins")
+    axs[1].set_ylabel("Fock cutoff N")
+    axs[1].set_xticks(nbin_values)
+    axs[1].set_yticks(N_values)
+    fig.colorbar(c1, ax=axs[1])
+
+    plt.show()
+
+
+def plot_comparison(delta_ll_mle, delta_ll_bme, runtime_grid_mle, runtime_grid_bme, N_values, nbin_values):
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True, 
+                            sharex=True, sharey=True)
+
+    # --- Shared color limits ---
+    vmin_ll = min(delta_ll_mle.min(), delta_ll_bme.min())
+    vmax_ll = max(delta_ll_mle.max(), delta_ll_bme.max())
+    vmin_rt = min(runtime_grid_mle.min(), runtime_grid_bme.min())
+    vmax_rt = max(runtime_grid_mle.max(), runtime_grid_bme.max())
+
+    # First heatmap: Δ log-likelihood MLE
+    c0 = axs[0,0].pcolormesh(nbin_values, N_values, delta_ll_mle, 
+                              shading="auto", cmap="viridis", vmin=vmin_ll, vmax=vmax_ll)
+    axs[0,0].set_title("Δ log-likelihood (MLE)")
+    fig.colorbar(c0, ax=axs[0,0])
+
+    # Second heatmap: Runtime MLE
+    c1 = axs[0,1].pcolormesh(nbin_values, N_values, runtime_grid_mle, 
+                              shading="auto", cmap="magma", vmin=vmin_rt, vmax=vmax_rt)
+    axs[0,1].set_title("Runtime (MLE, s)")
+    fig.colorbar(c1, ax=axs[0,1])
+
+    # Third heatmap: Δ log-likelihood BME
+    c2 = axs[1,0].pcolormesh(nbin_values, N_values, delta_ll_bme, 
+                              shading="auto", cmap="viridis", vmin=vmin_ll, vmax=vmax_ll)
+    axs[1,0].set_title("Δ log-likelihood (BME)")
+    axs[1,0].set_xlabel("Number of bins")
+    axs[1,0].set_ylabel("Fock cutoff N")
+    fig.colorbar(c2, ax=axs[1,0])
+
+    # Fourth heatmap: Runtime BME
+    c3 = axs[1,1].pcolormesh(nbin_values, N_values, runtime_grid_bme, 
+                              shading="auto", cmap="magma", vmin=vmin_rt, vmax=vmax_rt)
+    axs[1,1].set_title("Runtime (BME, s)")
+    axs[1,1].set_xlabel("Number of bins")
+    fig.colorbar(c3, ax=axs[1,1])
+
+    # Apply ticks only once (shared)
+    for ax in axs[-1,:]:   # bottom row x labels
+        ax.set_xticks(nbin_values)
+        ax.set_xlabel("Number of bins")
+    for ax in axs[:,0]:    # left column y labels
+        ax.set_yticks(N_values)
+        ax.set_ylabel("Fock cutoff N")
+
+    plt.show()
