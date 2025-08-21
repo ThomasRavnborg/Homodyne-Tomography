@@ -16,7 +16,7 @@ In this notebook, we work with the experimental data obtained using this setup. 
 
 ## Download and use instructions
 
-1. Clone this repository using '$ git clone https://github.com/ThomasRavnborg/Homodyne-Tomography.git'
+1. Clone this repository using `$ git clone https://github.com/ThomasRavnborg/Homodyne-Tomography.git`
 
 2. Download data-tora folder from [here](https://www.dropbox.com/scl/fi/0cb9i9vx9w0b1lpro8wpq/data-tora.zip?rlkey=nkouczz7r9ylnmkd3n639z7kt&dl=0). Put this into the data folder in the repo.
 
