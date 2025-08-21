@@ -45,8 +45,8 @@ def metropolis_hastings(
     rho_chain = [rho]
     logL_chain = [logL]
 
-    print("Computing Markov chain...\n")
-    for _ in tqdm(range(nrhos)):
+    #print("Computing Markov chain...\n")
+    for _ in range(nrhos):
         delta_T = np.tril(epsilon * (np.random.normal(size=(N, N)) 
                                      + 1j * np.random.normal(size=(N, N))))
         T_new = T + delta_T
@@ -117,10 +117,11 @@ def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
     if len(nrhos_values) == 1:
         likelihood_grid = np.zeros((len(N_values), len(nbin_values)))
         runtime_grid = np.zeros((len(N_values), len(nbin_values)))
-        for i, N in enumerate(N_values):
+
+        print("Running BME benchmark over N and num. bins...\n")
+        for i, N in tqdm(enumerate(N_values), total=len(N_values)):
             for j, nbins in enumerate(nbin_values):
                 start = time.time()
-                print(f"Running iMLE for N={N}, bins={nbins}")
                 rho_est, logL_subchain = run_BME(thetas, x_values, N=N, num_bins=nbins,
                                 nrho=nrhos_values[0])
                 runtime = time.time() - start
@@ -135,9 +136,10 @@ def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
     elif len(nrhos_values) > 1:
         likelihood_grid = np.zeros((1, len(nrhos_values)))
         runtime_grid = np.zeros((1, len(nrhos_values)))
-        for k, nrho in enumerate(nrhos_values):
+        print("Running BME benchmark over num. rhos...\n")
+        for k, nrho in tqdm(enumerate(nrhos_values), total=len(nrhos_values)):
             start = time.time()
-            print(f"Running BME for nrho={nrho}")
+            #print(f"Running BME for nrho={nrho}")
             rho_est, logL_subchain = run_BME(thetas, x_values, N=N_values[0], num_bins=nbin_values[0],
                                 nrho=nrhos_values[k])
             runtime = time.time() - start
@@ -152,8 +154,6 @@ def run_BME_benchmark(thetas, x_values, N_values, nbin_values, nrhos_values):
     else:
         raise ValueError("nrhos_values must be a list with at least one element.")
 
-    # Normalize likelihood per sample & relative to max
-    # per_sample = likelihood_grid / n_samples
-    # delta_ll = per_sample - np.max(per_sample)
+    print("BME benchmark completed!\n")
 
     return delta_ll, runtime_grid

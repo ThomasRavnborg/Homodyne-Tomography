@@ -6,9 +6,10 @@ Created on Fri Aug 15 13:50:36 2025
 """
 import numpy as np
 import time
+from tqdm import tqdm
 from utils import get_overlaps, bin_X
 
-def run_iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1):
+def run_iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1, run_benchmark=False):
     """
     Iterative Maximum Likelihood Estimation (iMLE).
     
@@ -68,7 +69,10 @@ def run_iMLE(thetas, x_vals, N=10, num_bins=150, max_iters=200, tol=1e-1):
         likelihoods.append(logL)
         # Log-likelihood convergence check
         if it > 0 and abs(likelihoods[-1] - likelihoods[-2]) < tol:
-            print(f"Converged at iteration {it}, log-likelihood={logL:.6f}")
+            
+            if not run_benchmark:
+                print(f"Converged at iteration {it}, log-likelihood={logL:.6f}")
+                
             break
 
     #print("Warning: Maximum iterations reached without convergence.")
@@ -86,12 +90,13 @@ def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, t
     likelihood_grid = np.zeros((len(N_values), len(nbin_values)))
     runtime_grid = np.zeros((len(N_values), len(nbin_values)))
 
-    for i, N in enumerate(N_values):
+    print("Running iMLE benchmark...\n")
+    for i, N in tqdm(enumerate(N_values), total=len(N_values)):
         for j, nbins in enumerate(nbin_values):
             start = time.time()
-            print(f"Running iMLE for N={N}, bins={nbins}")
+            #print(f"Running iMLE for N={N}, bins={nbins}")
             rhos, lls = run_iMLE(thetas, x_values, N=N, num_bins=nbins,
-                             max_iters=max_iters, tol=tol)
+                             max_iters=max_iters, tol=tol, run_benchmark=True)
             runtime = time.time() - start
 
             likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
@@ -100,6 +105,7 @@ def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, t
     # Normalize likelihood per sample & relative to max
     per_sample = likelihood_grid / n_samples
     delta_ll = per_sample - np.max(per_sample)
-
+    print("MLE benchmark completed!\n")
+    
     return delta_ll, runtime_grid
 
