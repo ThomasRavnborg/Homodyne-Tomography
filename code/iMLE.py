@@ -91,16 +91,20 @@ def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, t
     runtime_grid = np.zeros((len(N_values), len(nbin_values)))
 
     print("Running iMLE benchmark...\n")
-    for i, N in tqdm(enumerate(N_values), total=len(N_values)):
-        for j, nbins in enumerate(nbin_values):
-            start = time.time()
-            #print(f"Running iMLE for N={N}, bins={nbins}")
-            rhos, lls = run_iMLE(thetas, x_values, N=N, num_bins=nbins,
-                             max_iters=max_iters, tol=tol, run_benchmark=True)
-            runtime = time.time() - start
+    n_iter = len(N_values) * len(nbin_values)
+    with tqdm(total=n_iter) as pbar:    
+        for i, N in tqdm(enumerate(N_values), total=len(N_values)):
+            for j, nbins in enumerate(nbin_values):
+                start = time.time()
+                #print(f"Running iMLE for N={N}, bins={nbins}")
+                rhos, lls = run_iMLE(thetas, x_values, N=N, num_bins=nbins,
+                                max_iters=max_iters, tol=tol, run_benchmark=True)
+                runtime = time.time() - start
 
-            likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
-            runtime_grid[i, j] = runtime
+                likelihood_grid[i, j] = lls[-1]  # take final log-likelihood
+                runtime_grid[i, j] = runtime
+
+                pbar.update(1)
 
     # Normalize likelihood per sample & relative to max
     per_sample = likelihood_grid / n_samples
