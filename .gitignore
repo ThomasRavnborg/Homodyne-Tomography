@@ -4,7 +4,7 @@
 __pycache__/
 #Data files
 data/data-tora/
-data/dataframes/
+#data/dataframes/
 data/processed_data/
 #.DS_Store
 .DS_Store
