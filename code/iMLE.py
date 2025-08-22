@@ -93,7 +93,7 @@ def run_iMLE_benchmark(thetas, x_values, N_values, nbin_values, max_iters=200, t
     print("Running iMLE benchmark...\n")
     n_iter = len(N_values) * len(nbin_values)
     with tqdm(total=n_iter) as pbar:    
-        for i, N in tqdm(enumerate(N_values), total=len(N_values)):
+        for i, N in enumerate(N_values):
             for j, nbins in enumerate(nbin_values):
                 start = time.time()
                 #print(f"Running iMLE for N={N}, bins={nbins}")
